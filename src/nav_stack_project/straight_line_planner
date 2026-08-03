@@ -1,0 +1,120 @@
+#include "nav_stack_project/straight_line_planner.hpp"
+
+#include <cmath>
+#include <memory>
+#include <string>
+
+#include "nav2_util/node_utils.hpp"
+#include "pluginlib/class_list_macros.hpp"
+
+namespace nav_stack_project
+{
+
+void StraightLinePlanner::configure(
+  const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
+  std::string name,
+  std::shared_ptr<tf2_ros::Buffer> tf,
+  std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros)
+{
+  node_ = parent;
+  tf_ = tf;
+  name_ = name;
+  costmap_ = costmap_ros->getCostmap();
+  global_frame_ = costmap_ros->getGlobalFrameID();
+
+  auto node = node_.lock();
+
+  nav2_util::declare_parameter_if_not_declared(
+    node, name_ + ".interpolation_resolution", rclcpp::ParameterValue(0.1));
+  node->get_parameter(name_ + ".interpolation_resolution", interpolation_resolution_);
+
+  RCLCPP_INFO(
+    node->get_logger(),
+    "StraightLinePlanner '%s' configured (step resolution: %.2f m)",
+    name_.c_str(), interpolation_resolution_);
+}
+
+void StraightLinePlanner::cleanup()
+{
+  auto node = node_.lock();
+  if (node) {
+    RCLCPP_INFO(node->get_logger(), "Cleaning up StraightLinePlanner '%s'", name_.c_str());
+  }
+}
+
+void StraightLinePlanner::activate()
+{
+  auto node = node_.lock();
+  if (node) {
+    RCLCPP_INFO(node->get_logger(), "Activating StraightLinePlanner '%s'", name_.c_str());
+  }
+}
+
+void StraightLinePlanner::deactivate()
+{
+  auto node = node_.lock();
+  if (node) {
+    RCLCPP_INFO(node->get_logger(), "Deactivating StraightLinePlanner '%s'", name_.c_str());
+  }
+}
+
+nav_msgs::msg::Path StraightLinePlanner::createPlan(
+  const geometry_msgs::msg::PoseStamped & start,
+  const geometry_msgs::msg::PoseStamped & goal)
+{
+  nav_msgs::msg::Path global_path;
+  auto node = node_.lock();
+
+  global_path.poses.clear();
+  global_path.header.stamp = node ? node->now() : rclcpp::Clock().now();
+  global_path.header.frame_id = global_frame_;
+
+  double dx = goal.pose.position.x - start.pose.position.x;
+  double dy = goal.pose.position.y - start.pose.position.y;
+  double total_distance = std::hypot(dx, dy);
+
+  int num_steps = static_cast<int>(std::ceil(total_distance / interpolation_resolution_));
+  num_steps = std::max(num_steps, 1);
+
+  unsigned int collision_count = 0;
+
+  for (int i = 0; i <= num_steps; ++i) {
+    double ratio = static_cast<double>(i) / static_cast<double>(num_steps);
+
+    geometry_msgs::msg::PoseStamped pose;
+    pose.header.stamp = global_path.header.stamp;
+    pose.header.frame_id = global_frame_;
+    pose.pose.position.x = start.pose.position.x + ratio * dx;
+    pose.pose.position.y = start.pose.position.y + ratio * dy;
+    pose.pose.position.z = 0.0;
+    pose.pose.orientation = goal.pose.orientation;
+
+    // Sample the costmap at this waypoint. This is the hook point for a
+    // smarter planner: instead of ignoring collisions, you'd branch/search
+    // here (e.g., Theta* line-of-sight check, or A* node expansion).
+    unsigned int mx, my;
+    if (costmap_->worldToMap(pose.pose.position.x, pose.pose.position.y, mx, my)) {
+      unsigned char cost = costmap_->getCost(mx, my);
+      if (cost >= nav2_costmap_2d::LETHAL_OBSTACLE) {
+        collision_count++;
+      }
+    }
+
+    global_path.poses.push_back(pose);
+  }
+
+  if (collision_count > 0 && node) {
+    RCLCPP_WARN(
+      node->get_logger(),
+      "StraightLinePlanner: path crosses %u lethal cell(s). "
+      "This planner does not avoid obstacles by design -- "
+      "extend createPlan() to search around them.",
+      collision_count);
+  }
+
+  return global_path;
+}
+
+}  // namespace nav_stack_project
+
+PLUGINLIB_EXPORT_CLASS(nav_stack_project::StraightLinePlanner, nav2_core::GlobalPlanner)
