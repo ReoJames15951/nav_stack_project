@@ -1,0 +1,59 @@
+#ifndef NAV_STACK_PROJECT__STRAIGHT_LINE_PLANNER_HPP_
+#define NAV_STACK_PROJECT__STRAIGHT_LINE_PLANNER_HPP_
+
+#include <memory>
+#include <string>
+
+#include "rclcpp/rclcpp.hpp"
+#include "rclcpp_lifecycle/lifecycle_node.hpp"
+#include "nav2_core/global_planner.hpp"
+#include "nav2_costmap_2d/costmap_2d_ros.hpp"
+#include "nav2_util/lifecycle_node.hpp"
+#include "nav_msgs/msg/path.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
+
+namespace nav_stack_project
+{
+
+// A deliberately simple global planner used as a teaching/extension point.
+//
+// Behavior: walks in fixed-size steps from start to goal in a straight line,
+// sampling the costmap at each step. If a step lands on a lethal or
+// inscribed-inflated cell, the planner still emits the point (so you can see
+// where it would collide) but flags failure via a warning. This makes it
+// trivial to see the planner "think" and gives you a clean base to swap the
+// stepping rule for something smarter (Theta*, JPS, potential-field
+// gradient descent, etc.) as a resume/interview talking point.
+class StraightLinePlanner : public nav2_core::GlobalPlanner
+{
+public:
+  StraightLinePlanner() = default;
+  ~StraightLinePlanner() override = default;
+
+  void configure(
+    const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
+    std::string name,
+    std::shared_ptr<tf2_ros::Buffer> tf,
+    std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros) override;
+
+  void cleanup() override;
+  void activate() override;
+  void deactivate() override;
+
+  nav_msgs::msg::Path createPlan(
+    const geometry_msgs::msg::PoseStamped & start,
+    const geometry_msgs::msg::PoseStamped & goal) override;
+
+private:
+  rclcpp_lifecycle::LifecycleNode::WeakPtr node_;
+  std::shared_ptr<tf2_ros::Buffer> tf_;
+  nav2_costmap_2d::Costmap2D * costmap_;
+  std::string global_frame_, name_;
+
+  // Distance, in meters, between interpolated waypoints along the line.
+  double interpolation_resolution_;
+};
+
+}  // namespace nav_stack_project
+
+#endif  // NAV_STACK_PROJECT__STRAIGHT_LINE_PLANNER_HPP_
