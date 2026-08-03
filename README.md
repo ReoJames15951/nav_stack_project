@@ -1,6 +1,6 @@
 # nav_stack_project
 
-[![Build](https://github.com/YOUR_USERNAME/nav_stack_project/actions/workflows/build.yml/badge.svg)](https://github.com/YOUR_USERNAME/nav_stack_project/actions/workflows/build.yml)
+[![Build](https://github.com/ReoJames15951/nav_stack_project/actions/workflows/build.yml/badge.svg)](https://github.com/ReoJames15951/nav_stack_project/actions/workflows/build.yml)
 ![ROS2](https://img.shields.io/badge/ROS2-Humble%20%7C%20Jazzy-22314E?logo=ros&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
