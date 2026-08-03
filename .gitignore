@@ -1,0 +1,24 @@
+# colcon / ROS2 build artifacts (these live at the workspace root, not in this
+# package, but ignored here too in case you build in-place for testing)
+build/
+install/
+log/
+
+# Generated maps (keep the folder, ignore the generated pgm/yaml unless you
+# want to commit a reference map — remove these two lines if so)
+maps/*.pgm
+maps/*.yaml
+
+# Python
+__pycache__/
+*.pyc
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Gazebo
+*.log
+gz_logs/

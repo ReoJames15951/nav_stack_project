@@ -1,0 +1,12 @@
+<library path="straight_line_planner">
+  <class name="nav_stack_project/StraightLinePlanner"
+         type="nav_stack_project::StraightLinePlanner"
+         base_class_type="nav2_core::GlobalPlanner">
+    <description>
+      A minimal greedy global planner: steps in fixed-size increments directly
+      toward the goal, rejecting any point that lands in a lethal costmap cell.
+      Meant as a clear, hackable starting point for extending into Theta*,
+      Jump Point Search, or a costmap-gradient-following planner.
+    </description>
+  </class>
+</library>
