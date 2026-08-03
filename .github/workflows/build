@@ -1,0 +1,40 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    container:
+      image: ros:humble-ros-base
+
+    steps:
+      - name: Checkout repo into a colcon workspace
+        uses: actions/checkout@v4
+        with:
+          path: src/nav_stack_project
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          apt-get update
+          rosdep update
+          rosdep install --from-paths src --ignore-src -r -y
+
+      - name: Build with colcon
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          colcon build --event-handlers console_direct+
+
+      - name: Run tests
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          source install/setup.bash
+          colcon test --event-handlers console_direct+
+          colcon test-result --verbose
